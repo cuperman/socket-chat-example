@@ -1,21 +1,28 @@
 var app = require('express')();
 var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var WebSocket = require('ws');
+var wss = new WebSocket.Server({ server: http });
 
 app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
-io.on('connection', function(socket){
-  console.log('a user connected');
+var sockets = [];
 
-  socket.on('chat message', function(msg){
-    console.log('message: ' + msg);
-    io.emit('chat message', msg);
+wss.on('connection', function(ws, req) {
+  console.log('a user connected');
+  sockets.push(ws);
+
+  ws.on('close', function(evt) {
+    console.log('user disconnected');
+    sockets.splice(sockets.indexOf(ws), 1);
   });
 
-  socket.on('disconnect', function(){
-    console.log('user disconnected');
+  ws.on('message', function(msg) {
+    console.log('message: ' + msg);
+    sockets.forEach(function(socket) {
+      socket.send(msg);
+    });
   });
 });
 
